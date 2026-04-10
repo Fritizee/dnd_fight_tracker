@@ -1,0 +1,1916 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D&D Fight Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b0f;
+    --bg2: #0f1118;
+    --surface: #141720;
+    --surface2: #1c2030;
+    --border: #252a3a;
+    --border2: #2e3450;
+    --gold: #c9a84c;
+    --gold2: #e8c870;
+    --gold-dim: #7a6230;
+    --crimson: #c0392b;
+    --crimson2: #e74c3c;
+    --emerald: #1a6b4a;
+    --emerald2: #27ae60;
+    --text: #e8e4d8;
+    --text-muted: #8a8a9a;
+    --text-dim: #555570;
+    --hp-bar: #27ae60;
+    --hp-low: #f39c12;
+    --hp-crit: #c0392b;
+    --shadow: 0 20px 60px rgba(0,0,0,0.8);
+    --glow-gold: 0 0 20px rgba(201,168,76,0.3);
+    --glow-crimson: 0 0 20px rgba(192,57,43,0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 17px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background runes */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(201,168,76,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(192,57,43,0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(26,107,74,0.03) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .rune-bg {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .rune-bg svg {
+    position: absolute;
+    opacity: 0.03;
+    animation: runeFloat 20s ease-in-out infinite;
+  }
+
+  .rune-bg svg:nth-child(1) { top: 5%; left: 5%; width: 200px; animation-delay: 0s; }
+  .rune-bg svg:nth-child(2) { top: 10%; right: 8%; width: 150px; animation-delay: -7s; }
+  .rune-bg svg:nth-child(3) { bottom: 15%; left: 10%; width: 180px; animation-delay: -14s; }
+  .rune-bg svg:nth-child(4) { bottom: 5%; right: 5%; width: 220px; animation-delay: -3s; }
+
+  @keyframes runeFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0.03; }
+    50% { transform: translateY(-20px) rotate(5deg); opacity: 0.06; }
+  }
+
+  #app {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─── */
+  .app-header {
+    text-align: center;
+    padding: 40px 0 32px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .app-header .sigil {
+    font-size: 36px;
+    margin-bottom: 12px;
+    display: block;
+    animation: sigil-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes sigil-pulse {
+    0%, 100% { filter: drop-shadow(0 0 6px rgba(201,168,76,0.5)); }
+    50% { filter: drop-shadow(0 0 18px rgba(201,168,76,0.9)); }
+  }
+
+  .app-header h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(24px, 5vw, 40px);
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 50%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    margin-bottom: 8px;
+  }
+
+  .app-header p {
+    color: var(--text-muted);
+    font-style: italic;
+    font-size: 15px;
+    letter-spacing: 0.04em;
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), var(--gold), var(--gold-dim), transparent);
+    margin: 8px 0 28px;
+    position: relative;
+  }
+
+  .divider::after {
+    content: '⚔';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 18px;
+    background: var(--bg);
+    padding: 0 12px;
+    color: var(--gold);
+    filter: drop-shadow(0 0 8px rgba(201,168,76,0.6));
+  }
+
+  /* ─── PANELS ─── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.04);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), var(--gold), var(--gold-dim), transparent);
+  }
+
+  .panel-title {
+    font-family: 'Cinzel', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .panel-title span { font-size: 20px; }
+
+  .panel-sub {
+    color: var(--text-muted);
+    font-size: 14px;
+    font-style: italic;
+    margin-bottom: 24px;
+  }
+
+  /* ─── VIEWS ─── */
+  .view { display: none; animation: viewIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .view.active { display: block; }
+
+  @keyframes viewIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── CHARACTER INPUT TABLE ─── */
+  .char-table-head {
+    display: grid;
+    grid-template-columns: 1fr 90px 100px 70px 44px 70px;
+    gap: 10px;
+    padding: 0 10px 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+
+  .char-table-head span {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .char-rows { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 20px; }
+
+  .char-row {
+    display: grid;
+    grid-template-columns: 1fr 90px 100px 70px 44px 70px;
+    gap: 10px;
+    align-items: center;
+    animation: rowSlideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 6px 10px;
+    border: 1px solid transparent;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .char-row:hover { border-color: var(--border2); }
+
+  @keyframes rowSlideIn {
+    from { opacity: 0; transform: translateX(-14px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes rowSlideOut {
+    from { opacity: 1; transform: translateX(0) scaleY(1); max-height: 60px; margin-bottom: 6px; }
+    to { opacity: 0; transform: translateX(14px) scaleY(0); max-height: 0; margin-bottom: 0; padding: 0; }
+  }
+
+  .char-row.removing {
+    animation: rowSlideOut 0.3s ease forwards;
+    overflow: hidden;
+  }
+
+  input[type="text"], input[type="number"] {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Crimson Pro', serif;
+    font-size: 16px;
+    padding: 7px 10px;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    outline: none;
+  }
+
+  input[type="text"]::placeholder, input[type="number"]::placeholder {
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  input:focus {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 0 2px rgba(201,168,76,0.15);
+    background: var(--surface);
+  }
+
+  input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .btn::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background 0.15s;
+  }
+
+  .btn:hover::after { background: rgba(255,255,255,0.06); }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-gold {
+    background: linear-gradient(135deg, #b8922a 0%, #d4a94e 40%, #c9a84c 100%);
+    color: #1a0f00;
+    box-shadow: 0 4px 16px rgba(201,168,76,0.3);
+  }
+
+  .btn-gold:hover {
+    box-shadow: 0 6px 24px rgba(201,168,76,0.5);
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border2);
+  }
+
+  .btn-ghost:hover {
+    color: var(--text);
+    border-color: var(--gold-dim);
+  }
+
+  .btn-crimson {
+    background: transparent;
+    color: var(--crimson2);
+    border: 1px solid var(--crimson);
+    font-size: 12px;
+    padding: 7px 14px;
+  }
+
+  .btn-crimson:hover {
+    background: rgba(192,57,43,0.12);
+    box-shadow: 0 0 12px rgba(192,57,43,0.2);
+  }
+
+  .btn-sm {
+    font-size: 11px;
+    padding: 6px 12px;
+    letter-spacing: 0.06em;
+  }
+
+  .btn-wide {
+    width: 100%;
+    text-align: center;
+    padding: 14px;
+    font-size: 15px;
+    letter-spacing: 0.15em;
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  /* ─── INITIATIVE ORDER BAR ─── */
+  .initiative-track {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 6px 2px 14px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+  }
+
+  .init-card {
+    flex-shrink: 0;
+    background: var(--surface2);
+    border: 2px solid var(--border2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    text-align: center;
+    min-width: 100px;
+    position: relative;
+    overflow: hidden;
+    animation: cardSlideIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .init-card:nth-child(1) { animation-delay: 0s; }
+  .init-card:nth-child(2) { animation-delay: 0.06s; }
+  .init-card:nth-child(3) { animation-delay: 0.12s; }
+  .init-card:nth-child(4) { animation-delay: 0.18s; }
+  .init-card:nth-child(5) { animation-delay: 0.24s; }
+  .init-card:nth-child(6) { animation-delay: 0.30s; }
+  .init-card:nth-child(7) { animation-delay: 0.36s; }
+
+  @keyframes cardSlideIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .init-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(201,168,76,0) 0%, rgba(201,168,76,0) 100%);
+    transition: background 0.25s;
+  }
+
+  .init-card:hover {
+    border-color: var(--gold-dim);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px var(--gold-dim);
+  }
+
+  .init-card.selected {
+    border-color: var(--gold);
+    box-shadow: var(--glow-gold), 0 8px 30px rgba(0,0,0,0.5);
+    background: linear-gradient(135deg, rgba(201,168,76,0.08) 0%, rgba(201,168,76,0.04) 100%);
+  }
+
+  .init-card.dead {
+    opacity: 0.4;
+    filter: grayscale(0.8);
+    border-style: dashed;
+  }
+
+  .init-card.dead .card-name { text-decoration: line-through; }
+
+  .init-badge {
+    display: inline-block;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    background: rgba(201,168,76,0.12);
+    color: var(--gold-dim);
+    letter-spacing: 0.08em;
+  }
+
+  .init-card.selected .init-badge {
+    background: rgba(201,168,76,0.25);
+    color: var(--gold);
+  }
+
+  .init-card.first-init .init-badge {
+    background: rgba(201,168,76,0.3);
+    color: var(--gold2);
+    animation: badge-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes badge-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.4); }
+    50% { box-shadow: 0 0 0 4px rgba(201,168,76,0); }
+  }
+
+  .card-name {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+    word-break: break-word;
+  }
+
+  /* HP Bar (init cards): base HP + temp HP segments vs max HP */
+  .hp-mini-bar {
+    height: 4px;
+    background: var(--bg);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+    position: relative;
+  }
+
+  .hp-mini-base {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.5s;
+  }
+
+  .hp-mini-temp {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    pointer-events: none;
+    background: linear-gradient(90deg, rgba(100, 185, 220, 0.92), rgba(126, 200, 227, 0.98));
+    box-shadow: 0 0 8px rgba(126, 200, 227, 0.35);
+    transition: left 0.5s cubic-bezier(0.22, 1, 0.36, 1), width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .hp-mini-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .hp-mini-text b { color: var(--text); }
+  .hp-mini-ac {
+    margin-top: 3px;
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    color: var(--gold-dim);
+    letter-spacing: 0.08em;
+  }
+
+  /* ─── TURN TRACKER ─── */
+  .turn-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-bottom: 20px;
+  }
+
+  .turn-label {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .turn-name {
+    font-family: 'Cinzel', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gold2);
+    text-shadow: 0 0 12px rgba(232,200,112,0.5);
+  }
+
+  .turn-round {
+    margin-left: auto;
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+
+  /* ─── HP CALCULATOR + ATTACKS ROW (fight view) ─── */
+  .fight-calc-attack-row {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .fight-calc-attack-row #hp-calc-section,
+  .fight-calc-attack-row #attack-panel-section {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .fight-calc-attack-row #hp-calc-section {
+    flex: 1 1 340px;
+  }
+  .fight-calc-attack-row #attack-panel-section {
+    flex: 0 1 340px;
+    max-width: 420px;
+  }
+  .fight-calc-attack-row #hp-calc-section:empty,
+  .fight-calc-attack-row #attack-panel-section:empty {
+    display: none;
+  }
+  .fight-calc-attack-row .hp-calc-panel,
+  .fight-calc-attack-row .attack-panel {
+    margin-top: 0;
+    flex: 1;
+    min-height: 100%;
+  }
+
+  /* ─── HP CALCULATOR ─── */
+  .hp-calc-panel {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 20px;
+    margin-top: 20px;
+    position: relative;
+    overflow: hidden;
+    animation: panelExpand 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes panelExpand {
+    from { opacity: 0; transform: scaleY(0.92); transform-origin: top; }
+    to { opacity: 1; transform: scaleY(1); }
+  }
+
+  .hp-calc-panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--crimson), transparent);
+  }
+
+  .hp-calc-header {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .selected-char-name {
+    color: var(--gold2);
+    font-style: italic;
+  }
+
+  /* HP Display */
+  .hp-display-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .hp-stat {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .hp-stat-label {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+
+  .hp-stat-value {
+    font-family: 'Cinzel', serif;
+    font-size: 22px;
+    font-weight: 700;
+    transition: color 0.4s, text-shadow 0.4s;
+  }
+
+  .hp-stat-value.full { color: var(--emerald2); text-shadow: 0 0 12px rgba(39,174,96,0.4); }
+  .hp-stat-value.mid { color: var(--hp-low); text-shadow: 0 0 12px rgba(243,156,18,0.4); }
+  .hp-stat-value.low { color: var(--crimson2); text-shadow: 0 0 12px rgba(231,76,60,0.4); }
+  .hp-stat-value.dead { color: var(--text-dim); text-shadow: none; }
+  .hp-stat-value.time { color: #7ec8e3; text-shadow: 0 0 12px rgba(126,200,227,0.4); }
+
+  /* HP Bar full size */
+  .hp-bar-full {
+    height: 12px;
+    background: var(--bg);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 0 0 20px;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+
+  .hp-bar-full-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1), background 0.5s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hp-bar-full-fill::after {
+    content: '';
+    position: absolute; top: 0; left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: shimmer 2s linear infinite;
+  }
+
+  @keyframes shimmer {
+    from { left: -60%; }
+    to { left: 140%; }
+  }
+
+  .hp-time-fill {
+    height: 100%;
+    background: rgba(126,200,227,0.4);
+    position: absolute; top: 0;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    border-radius: 0 6px 6px 0;
+  }
+
+  /* Amount input row */
+  .calc-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .calc-input-row label {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+
+  .calc-input-row input {
+    max-width: 120px;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 300;
+  }
+
+  .calc-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+
+  .calc-action-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    border-radius: 8px;
+    padding: 12px 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .calc-action-btn::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background 0.15s;
+  }
+
+  .calc-action-btn:hover::after { background: rgba(255,255,255,0.06); }
+  .calc-action-btn:active { transform: scale(0.96); }
+
+  .btn-damage {
+    background: rgba(192,57,43,0.12);
+    border-color: var(--crimson);
+    color: var(--crimson2);
+  }
+
+  .btn-damage:hover {
+    background: rgba(192,57,43,0.22);
+    box-shadow: 0 0 16px rgba(192,57,43,0.3);
+  }
+
+  .btn-heal {
+    background: rgba(39,174,96,0.10);
+    border-color: var(--emerald2);
+    color: var(--emerald2);
+  }
+
+  .btn-heal:hover {
+    background: rgba(39,174,96,0.2);
+    box-shadow: 0 0 16px rgba(39,174,96,0.3);
+  }
+
+  .btn-timehp {
+    background: rgba(126,200,227,0.08);
+    border-color: rgba(126,200,227,0.5);
+    color: #7ec8e3;
+  }
+
+  .btn-timehp:hover {
+    background: rgba(126,200,227,0.15);
+    box-shadow: 0 0 16px rgba(126,200,227,0.2);
+  }
+
+  .calc-action-btn .btn-icon { font-size: 16px; display: block; margin-bottom: 2px; }
+
+  /* ─── DAMAGE FLASH ANIMATION ─── */
+  @keyframes damageFlash {
+    0% { background: rgba(192,57,43,0.0); }
+    30% { background: rgba(192,57,43,0.15); }
+    100% { background: rgba(192,57,43,0.0); }
+  }
+
+  @keyframes healFlash {
+    0% { background: rgba(39,174,96,0.0); }
+    30% { background: rgba(39,174,96,0.15); }
+    100% { background: rgba(39,174,96,0.0); }
+  }
+
+  .flash-damage { animation: damageFlash 0.5s ease; }
+  .flash-heal { animation: healFlash 0.5s ease; }
+
+  /* Floating damage number */
+  .float-number {
+    position: absolute;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 18px;
+    pointer-events: none;
+    z-index: 100;
+    animation: floatUp 1.2s ease forwards;
+  }
+
+  @keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0) scale(1.2); }
+    100% { opacity: 0; transform: translateY(-50px) scale(0.8); }
+  }
+
+  /* ─── NEXT TURN BUTTON ─── */
+  .next-turn-btn {
+    background: linear-gradient(135deg, rgba(201,168,76,0.08), rgba(201,168,76,0.04));
+    border: 1px solid var(--gold-dim);
+    border-radius: 10px;
+    padding: 12px 24px;
+    color: var(--gold);
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .next-turn-btn:hover {
+    background: rgba(201,168,76,0.12);
+    box-shadow: var(--glow-gold);
+    transform: translateY(-1px);
+  }
+
+  .next-turn-btn:active { transform: scale(0.97); }
+
+  /* ─── COMBAT LOG ─── */
+  .combat-log {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    max-height: 160px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border2) transparent;
+    margin-top: 20px;
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  .log-title {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 8px;
+    font-style: normal;
+  }
+
+  .log-entry {
+    color: var(--text-muted);
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    animation: logAppear 0.3s ease both;
+  }
+
+  @keyframes logAppear {
+    from { opacity: 0; transform: translateX(-8px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry .log-dmg { color: var(--crimson2); font-weight: 600; font-style: normal; }
+  .log-entry .log-heal { color: var(--emerald2); font-weight: 600; font-style: normal; }
+  .log-entry .log-timehp { color: #7ec8e3; font-weight: 600; font-style: normal; }
+  .log-entry .log-name { color: var(--text); font-style: normal; }
+  .log-entry .log-round { color: var(--gold-dim); font-style: normal; }
+
+  /* ─── FIGHT ACTIONS ─── */
+  .fight-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ─── BRIGHTER BATTLE MODE ─── */
+  #view-fight .panel {
+    background: #1a1f2f;
+    border-color: #3a4260;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.07);
+  }
+  #view-fight .turn-bar,
+  #view-fight .hp-calc-panel,
+  #view-fight .attack-panel,
+  #view-fight .combat-log,
+  #view-fight .init-card {
+    background: #22283a;
+    border-color: #455074;
+  }
+  #view-fight .turn-label,
+  #view-fight .log-title,
+  #view-fight .hp-mini-text,
+  #view-fight .hp-mini-ac {
+    color: #b8bfd6;
+  }
+  #view-fight .card-name,
+  #view-fight .hp-mini-text b {
+    color: #f0ebdd;
+  }
+  #view-fight .init-card.selected {
+    background: linear-gradient(135deg, rgba(232,200,112,0.18) 0%, rgba(232,200,112,0.08) 100%);
+    box-shadow: 0 0 26px rgba(232,200,112,0.32), 0 8px 30px rgba(0,0,0,0.45);
+  }
+
+  /* ─── DEAD OVERLAY ─── */
+  .dead-banner {
+    text-align: center;
+    padding: 24px;
+    background: rgba(192,57,43,0.06);
+    border: 1px solid rgba(192,57,43,0.2);
+    border-radius: 10px;
+    margin-top: 20px;
+    animation: viewIn 0.5s ease both;
+  }
+
+  .dead-banner h3 {
+    font-family: 'Cinzel', serif;
+    color: var(--crimson2);
+    font-size: 22px;
+    margin-bottom: 8px;
+    text-shadow: var(--glow-crimson);
+  }
+
+  .dead-banner p { color: var(--text-muted); font-style: italic; }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-family: 'Crimson Pro', serif;
+    font-size: 15px;
+    color: var(--text);
+    z-index: 999;
+    transition: transform 0.4s cubic-bezier(0.22,1,0.36,1), opacity 0.4s;
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  .toast.error { border-color: var(--crimson); color: var(--crimson2); }
+  .toast.success { border-color: var(--gold-dim); color: var(--gold); }
+
+  /* ─── MISC ─── */
+  .section-gap { margin-top: 24px; }
+
+  .char-count-badge {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    background: rgba(201,168,76,0.12);
+    color: var(--gold-dim);
+    border-radius: 4px;
+    padding: 2px 8px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  /* ─── THREE DOTS / ATTACKS BUTTON ─── */
+  .btn-dots {
+    background: transparent;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--gold-dim);
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    letter-spacing: -1px;
+  }
+  .btn-dots:hover {
+    border-color: var(--gold-dim);
+    color: var(--gold);
+    background: rgba(201,168,76,0.08);
+    box-shadow: 0 0 10px rgba(201,168,76,0.15);
+  }
+  .btn-dots.has-attacks {
+    border-color: rgba(201,168,76,0.5);
+    color: var(--gold);
+    background: rgba(201,168,76,0.08);
+  }
+
+  /* ─── ATTACKS VIEW ─── */
+  .attacks-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    padding: 4px 0 16px;
+    transition: color 0.2s;
+  }
+  .attacks-back-btn:hover { color: var(--gold); }
+
+  .attacks-char-title {
+    font-family: 'Cinzel', serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gold2);
+    margin-bottom: 4px;
+    text-shadow: 0 0 16px rgba(232,200,112,0.3);
+  }
+
+  .attack-list { display: flex; flex-direction: column; gap: 10px; margin: 20px 0; }
+
+  .attack-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 80px 80px 44px;
+    gap: 10px;
+    align-items: center;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    animation: rowSlideIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .attack-row-label {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+
+  select {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Crimson Pro', serif;
+    font-size: 16px;
+    padding: 7px 10px;
+    width: 100%;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8a9a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+  }
+  select:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 2px rgba(201,168,76,0.15); }
+  select option { background: #1a1628; }
+
+  /* Attack panel inside fight */
+  .attack-panel {
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-top: 16px;
+    position: relative;
+    overflow: hidden;
+    animation: panelExpand 0.35s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .attack-panel::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+  }
+  .attack-panel-title {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 14px;
+    letter-spacing: 0.08em;
+  }
+  .attack-btn-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .attack-use-btn {
+    background: rgba(201,168,76,0.07);
+    border: 1px solid var(--gold-dim);
+    border-radius: 8px;
+    color: var(--gold);
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 100px;
+  }
+  .attack-use-btn:hover {
+    background: rgba(201,168,76,0.15);
+    box-shadow: 0 0 14px rgba(201,168,76,0.25);
+    transform: translateY(-1px);
+  }
+  .attack-use-btn:active { transform: scale(0.97); }
+  .attack-use-btn .attack-dice-label {
+    font-size: 16px;
+    color: var(--gold2);
+  }
+
+  /* Dice roll result */
+  .roll-result {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 14px;
+    background: rgba(201,168,76,0.06);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 8px;
+    padding: 12px 16px;
+    animation: viewIn 0.4s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .roll-total {
+    font-family: 'Cinzel', serif;
+    font-size: 36px;
+    font-weight: 900;
+    color: var(--gold2);
+    text-shadow: 0 0 20px rgba(232,200,112,0.5);
+    line-height: 1;
+    min-width: 60px;
+    text-align: center;
+  }
+  .roll-breakdown {
+    font-family: 'Crimson Pro', serif;
+    font-size: 14px;
+    color: var(--text-muted);
+    font-style: italic;
+    line-height: 1.6;
+  }
+  .roll-breakdown strong { color: var(--text); font-style: normal; }
+
+  @keyframes rollPop {
+    0% { transform: scale(0.6); opacity: 0; }
+    60% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .roll-total { animation: rollPop 0.5s cubic-bezier(0.22,1,0.36,1) both; }
+
+  @media (max-width: 720px) {
+    .fight-calc-attack-row {
+      flex-direction: column;
+    }
+    .fight-calc-attack-row #attack-panel-section {
+      flex: 1 1 auto;
+      max-width: none;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .char-table-head { grid-template-columns: 1fr 70px 80px 56px 36px 60px; }
+    .char-row { grid-template-columns: 1fr 70px 80px 56px 36px 60px; }
+    .attack-row { grid-template-columns: 60px 1fr 70px 70px 36px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="rune-bg">
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="100" cy="100" r="80" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+    <polygon points="100,20 180,160 20,160" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+    <circle cx="100" cy="100" r="10" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+    <line x1="100" y1="20" x2="100" y2="180" stroke="#c9a84c" stroke-width="0.8"/>
+    <line x1="20" y1="100" x2="180" y2="100" stroke="#c9a84c" stroke-width="0.8"/>
+  </svg>
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="100,10 190,70 190,130 100,190 10,130 10,70" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+    <polygon points="100,40 160,78 160,122 100,160 40,122 40,78" fill="none" stroke="#c9a84c" stroke-width="1"/>
+    <circle cx="100" cy="100" r="15" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+  </svg>
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="100" cy="100" r="90" fill="none" stroke="#c9a84c" stroke-width="1"/>
+    <line x1="10" y1="100" x2="190" y2="100" stroke="#c9a84c" stroke-width="1"/>
+    <line x1="100" y1="10" x2="100" y2="190" stroke="#c9a84c" stroke-width="1"/>
+    <line x1="37" y1="37" x2="163" y2="163" stroke="#c9a84c" stroke-width="1"/>
+    <line x1="163" y1="37" x2="37" y2="163" stroke="#c9a84c" stroke-width="1"/>
+    <circle cx="100" cy="100" r="30" fill="none" stroke="#c9a84c" stroke-width="1"/>
+  </svg>
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="100,10 190,190 10,190" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+    <polygon points="100,190 10,10 190,10" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+    <circle cx="100" cy="100" r="50" fill="none" stroke="#c9a84c" stroke-width="1"/>
+  </svg>
+</div>
+
+<div id="app">
+  <header class="app-header">
+    <span class="sigil">⚔️</span>
+    <h1>D&D Fight Tracker</h1>
+    <p>Track initiative, HP, and the chaos of battle</p>
+    <div class="divider"></div>
+  </header>
+
+  <!-- ══════════ ADD CHARACTERS VIEW ══════════ -->
+  <div id="view-setup" class="view active">
+    <div class="panel">
+      <div class="panel-title">
+        <span>🧙</span> Assemble Your Party
+        <span id="char-count-badge" class="char-count-badge">0 combatants</span>
+      </div>
+      <div class="panel-sub">Enter each combatant's name, HP, AC, and initiative. Then charge into battle.</div>
+
+      <div class="char-table-head">
+        <span>Name</span>
+        <span>Max HP</span>
+        <span>Initiative</span>
+        <span>AC</span>
+        <span style="text-align:center;">Atk</span>
+        <span></span>
+      </div>
+
+      <div id="char-rows" class="char-rows"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="addCharRow()">＋ Add Combatant</button>
+        <button class="btn btn-gold btn-wide" onclick="startFight()" style="flex:1;">
+          ⚔ Begin Battle
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ ATTACKS VIEW ══════════ -->
+  <div id="view-attacks" class="view">
+    <div class="panel">
+      <button class="attacks-back-btn" onclick="closeAttacksView()">← Back to Party</button>
+      <div class="panel-title"><span>🗡</span> Attacks for <span id="attacks-char-name" style="color:var(--gold2); font-style:italic;"></span></div>
+      <div class="panel-sub">Define attacks with dice rolls. Each attack rolls its dice and adds the bonus.</div>
+
+      <div id="attack-list" class="attack-list"></div>
+
+      <button class="btn btn-ghost" onclick="addAttackRow()">＋ Add Attack</button>
+    </div>
+  </div>
+
+  <!-- ══════════ FIGHT VIEW ══════════ -->
+  <div id="view-fight" class="view">
+    <div class="panel">
+      <div class="panel-title"><span>🎲</span> Battle in Progress</div>
+
+      <!-- Turn bar -->
+      <div class="turn-bar" id="turn-bar">
+        <div>
+          <div class="turn-label">Current Turn</div>
+          <div class="turn-name" id="turn-name">—</div>
+        </div>
+        <div class="turn-round" id="turn-round">Round 1</div>
+      </div>
+
+      <!-- Initiative track -->
+      <div class="init-hint" style="font-family:'Cinzel',serif; font-size:11px; color:var(--text-dim); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px;">
+        Initiative Order
+      </div>
+      <div class="initiative-track" id="initiative-track"></div>
+
+      <div class="fight-calc-attack-row">
+        <div id="hp-calc-section"></div>
+        <div id="attack-panel-section"></div>
+      </div>
+
+      <!-- Combat Log -->
+      <div class="combat-log">
+        <div class="log-title">📜 Combat Log</div>
+        <div id="combat-log-entries"></div>
+      </div>
+
+      <!-- Fight actions -->
+      <div class="fight-actions">
+        <button class="next-turn-btn" onclick="nextTurn()">
+          ⏩ Next Turn
+        </button>
+        <button class="btn btn-ghost" onclick="endFight()">
+          🏳 End Battle
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+let characters = [];      // CharacterState objects
+let selectedIdx = 0;      // Which character is selected in HP calc
+let currentTurnIdx = 0;   // Whose turn it is
+let round = 1;
+let logCount = 0;
+
+// attacks: map of rowId -> array of {numDice, diceType, bonus}
+let charAttacks = {};
+// which rowId is being edited in attacks view
+let editingAttacksRowId = null;
+
+// ─── CHARACTER MODEL ─────────────────────────────────────
+function makeChar(name, maxHp, initiative, ac, attacks) {
+  return { name, maxHp, initiative, ac, hp: maxHp, timeHp: 0, alive: true, attacks: attacks || [] };
+}
+
+function effectiveHp(c) { return Math.max(0, c.hp) + Math.max(0, c.timeHp); }
+function hpColor(c) {
+  const pct = c.hp / c.maxHp;
+  if (c.hp <= 0) return '#555570';
+  if (pct <= 0.25) return '#e74c3c';
+  if (pct <= 0.5) return '#f39c12';
+  return '#27ae60';
+}
+function hpClass(c) {
+  if (c.hp <= 0) return 'dead';
+  const pct = c.hp / c.maxHp;
+  if (pct <= 0.25) return 'low';
+  if (pct <= 0.5) return 'mid';
+  return 'full';
+}
+
+// ─── SETUP VIEW ──────────────────────────────────────────
+let rowId = 0;
+function addCharRow(defaultName = '', defaultHp = '', defaultInit = '', defaultAc = '') {
+  rowId++;
+  const id = rowId;
+  charAttacks[id] = [];
+  const container = document.getElementById('char-rows');
+  const row = document.createElement('div');
+  row.className = 'char-row';
+  row.dataset.rowId = id;
+  row.innerHTML = `
+    <input type="text" placeholder="e.g. Aragorn" value="${defaultName}" data-field="name" onchange="updateCharCount()">
+    <input type="number" placeholder="100" value="${defaultHp}" data-field="hp" min="1">
+    <input type="number" placeholder="15" value="${defaultInit}" data-field="init" min="1" max="20">
+    <input type="number" placeholder="16" value="${defaultAc}" data-field="ac" min="1">
+    <button class="btn-dots" id="dots-btn-${id}" onclick="openAttacksView(${id})" title="Edit attacks">···</button>
+    <button class="btn btn-crimson btn-sm" onclick="removeRow(${id})">✕</button>
+  `;
+  container.appendChild(row);
+  if (!defaultName) row.querySelector('[data-field="name"]').focus();
+  updateCharCount();
+}
+
+function removeRow(id) {
+  const rows = document.querySelectorAll('.char-row');
+  if (rows.length <= 1) { showToast('Keep at least one row!', 'error'); return; }
+  const row = document.querySelector(`.char-row[data-row-id="${id}"]`);
+  if (!row) return;
+  row.classList.add('removing');
+  setTimeout(() => { row.remove(); delete charAttacks[id]; updateCharCount(); }, 300);
+}
+
+function updateCharCount() {
+  const count = document.querySelectorAll('.char-row').length;
+  document.getElementById('char-count-badge').textContent =
+    count === 1 ? '1 combatant' : `${count} combatants`;
+}
+
+function getRowsData() {
+  const rows = document.querySelectorAll('.char-row');
+  const results = [];
+  const namesSet = new Set();
+
+  for (const row of rows) {
+    const name = row.querySelector('[data-field="name"]').value.trim();
+    const hpRaw = row.querySelector('[data-field="hp"]').value.trim();
+    const initRaw = row.querySelector('[data-field="init"]').value.trim();
+    const acRaw = row.querySelector('[data-field="ac"]').value.trim();
+    const rid = parseInt(row.dataset.rowId);
+
+    if (!name) continue;
+
+    if (namesSet.has(name.toLowerCase())) {
+      showToast(`Duplicate name: "${name}"`, 'error'); return null;
+    }
+    namesSet.add(name.toLowerCase());
+
+    const hp = parseInt(hpRaw);
+    const init = parseInt(initRaw);
+    const ac = parseInt(acRaw);
+    if (isNaN(hp) || hp <= 0) { showToast(`"${name}" needs a valid HP (> 0)`, 'error'); return null; }
+    if (isNaN(init)) { showToast(`"${name}" needs a valid Initiative`, 'error'); return null; }
+    if (isNaN(ac) || ac <= 0) { showToast(`"${name}" needs a valid AC (> 0)`, 'error'); return null; }
+
+    results.push({ name, hp, init, ac, attacks: charAttacks[rid] || [] });
+  }
+  return results;
+}
+
+function startFight() {
+  const data = getRowsData();
+  if (!data || data.length === 0) {
+    showToast('Add at least one combatant!', 'error'); return;
+  }
+
+  const unsorted = data.map(d => makeChar(d.name, d.hp, d.init, d.ac, d.attacks));
+
+  // Sort: initiative 20 always first (preserve order among ties), then desc
+  const indexed = unsorted.map((c, i) => ({ c, i }));
+  indexed.sort((a, b) => {
+    if (a.c.initiative === 20 && b.c.initiative !== 20) return -1;
+    if (b.c.initiative === 20 && a.c.initiative !== 20) return 1;
+    if (a.c.initiative === 20 && b.c.initiative === 20) return a.i - b.i;
+    return b.c.initiative - a.c.initiative;
+  });
+  characters = indexed.map(x => x.c);
+
+  selectedIdx = 0;
+  currentTurnIdx = 0;
+  round = 1;
+  logCount = 0;
+  document.getElementById('combat-log-entries').innerHTML = '';
+
+  switchView('view-fight');
+  renderFightView();
+  addLog(`⚔ Battle begins! Round <span class="log-round">1</span>`);
+  addLog(`🎲 <span class="log-name">${characters[0].name}</span>'s turn`);
+}
+
+// ─── ATTACKS VIEW ────────────────────────────────────────
+let attackRowId = 0;
+
+function openAttacksView(rid) {
+  editingAttacksRowId = rid;
+  const row = document.querySelector(`.char-row[data-row-id="${rid}"]`);
+  const name = row ? row.querySelector('[data-field="name"]').value.trim() || 'Unnamed' : 'Unnamed';
+  document.getElementById('attacks-char-name').textContent = name;
+  renderAttackList();
+  switchView('view-attacks');
+}
+
+function closeAttacksView() {
+  // Update the dots button highlight
+  if (editingAttacksRowId !== null) {
+    const atks = charAttacks[editingAttacksRowId] || [];
+    const btn = document.getElementById(`dots-btn-${editingAttacksRowId}`);
+    if (btn) btn.classList.toggle('has-attacks', atks.length > 0);
+  }
+  editingAttacksRowId = null;
+  switchView('view-setup');
+}
+
+function renderAttackList() {
+  const container = document.getElementById('attack-list');
+  container.innerHTML = '';
+  const atks = charAttacks[editingAttacksRowId] || [];
+  if (atks.length === 0) {
+    container.innerHTML = `<div style="color:var(--text-dim); font-style:italic; font-size:14px; padding:8px 0;">No attacks yet. Add one below.</div>`;
+    return;
+  }
+  atks.forEach((atk, i) => {
+    const div = document.createElement('div');
+    div.className = 'attack-row';
+    div.innerHTML = `
+      <div>
+        <div class="attack-row-label">Dice #</div>
+        <input type="number" min="1" max="20" value="${atk.numDice}" style="text-align:center;"
+          oninput="updateAttack(${i},'numDice',this.value)">
+      </div>
+      <div>
+        <div class="attack-row-label">Dice Type</div>
+        <select onchange="updateAttack(${i},'diceType',this.value)">
+          ${[4,6,8,10,12,20,100].map(d => `<option value="${d}" ${atk.diceType===d?'selected':''}> d${d}</option>`).join('')}
+        </select>
+      </div>
+      <div>
+        <div class="attack-row-label">+ Bonus</div>
+        <input type="number" value="${atk.bonus}" style="text-align:center;"
+          oninput="updateAttack(${i},'bonus',this.value)">
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;padding-top:18px;">
+        <span style="font-family:'Cinzel',serif; font-size:13px; color:var(--text-muted);">
+          ${atk.numDice}d${atk.diceType}${atk.bonus>=0?'+':''}${atk.bonus}
+        </span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;padding-top:18px;">
+        <button class="btn btn-crimson btn-sm" onclick="removeAttack(${i})">✕</button>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function addAttackRow() {
+  if (!charAttacks[editingAttacksRowId]) charAttacks[editingAttacksRowId] = [];
+  charAttacks[editingAttacksRowId].push({ numDice: 1, diceType: 6, bonus: 0 });
+  renderAttackList();
+}
+
+function removeAttack(i) {
+  charAttacks[editingAttacksRowId].splice(i, 1);
+  renderAttackList();
+}
+
+function updateAttack(i, field, value) {
+  const atk = charAttacks[editingAttacksRowId][i];
+  if (field === 'numDice') atk.numDice = Math.max(1, parseInt(value) || 1);
+  else if (field === 'diceType') atk.diceType = parseInt(value);
+  else if (field === 'bonus') atk.bonus = parseInt(value) || 0;
+  // re-render just the label part without full re-render to avoid losing focus
+  renderAttackList();
+}
+
+// ─── FIGHT VIEW ───────────────────────────────────────────
+function switchView(id) {
+  document.querySelectorAll('.view').forEach(v => {
+    v.classList.remove('active');
+    v.style.display = 'none';
+  });
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  // Force reflow then add active
+  requestAnimationFrame(() => { el.classList.add('active'); });
+}
+
+function renderFightView() {
+  renderTurnBar();
+  renderInitiativeTrack();
+  renderHpCalc();
+  renderAttackPanel();
+}
+
+function renderTurnBar() {
+  const c = characters[currentTurnIdx];
+  document.getElementById('turn-name').textContent = c ? c.name : '—';
+  document.getElementById('turn-round').textContent = `Round ${round}`;
+}
+
+function renderInitiativeTrack() {
+  const track = document.getElementById('initiative-track');
+  track.innerHTML = '';
+  characters.forEach((c, i) => {
+    const card = document.createElement('div');
+    card.className = 'init-card';
+    if (i === selectedIdx) card.classList.add('selected');
+    if (i === currentTurnIdx) card.classList.add('first-init');
+    if (!c.alive || c.hp <= 0) card.classList.add('dead');
+
+    // Filled width vs max HP (can’t go past 100% of track); green/blue split by share of effective HP.
+    // So at full base HP + temp, the bar stays 100% wide but shows green : blue = hp : temp.
+    const hp = Math.max(0, c.hp);
+    const time = Math.max(0, c.timeHp);
+    const eff = hp + time;
+    const totalFill = eff <= 0 ? 0 : Math.min(100, (eff / c.maxHp) * 100);
+    let basePct = 0;
+    let timePct = 0;
+    if (eff > 0) {
+      basePct = (hp / eff) * totalFill;
+      timePct = (time / eff) * totalFill;
+    }
+    const col = hpColor(c);
+    const baseRadius = timePct > 0 ? '3px 0 0 3px' : '3px';
+    const tempRadius = basePct <= 0 ? '3px' : '0 3px 3px 0';
+
+    card.innerHTML = `
+      <div class="init-badge">INIT ${c.initiative}</div>
+      <div class="card-name">${escHtml(c.name)}</div>
+      <div class="hp-mini-bar">
+        <div class="hp-mini-base" style="width:${basePct}%;background:${col};border-radius:${baseRadius};"></div>
+        <div class="hp-mini-temp" style="left:${basePct}%;width:${timePct}%;border-radius:${tempRadius};"></div>
+      </div>
+      <div class="hp-mini-text"><b>${effectiveHp(c)}</b>/${c.maxHp}</div>
+      <div class="hp-mini-ac">AC ${c.ac}</div>
+    `;
+    card.onclick = () => selectChar(i);
+    track.appendChild(card);
+  });
+}
+
+function renderHpCalc() {
+  const section = document.getElementById('hp-calc-section');
+  const c = characters[selectedIdx];
+  if (!c) { section.innerHTML = ''; return; }
+
+  const pct = Math.min(100, (c.hp / c.maxHp) * 100);
+  const timePct = Math.min(100 - Math.max(0, pct), (c.timeHp / c.maxHp) * 100);
+  const col = hpColor(c);
+  const cls = hpClass(c);
+
+  section.innerHTML = `
+    <div class="hp-calc-panel">
+      <div class="hp-calc-header">
+        🗡 HP Calculator —
+        <span class="selected-char-name">${escHtml(c.name)}</span>
+      </div>
+
+      <div class="hp-display-row">
+        <div class="hp-stat">
+          <div class="hp-stat-label">Base HP</div>
+          <div class="hp-stat-value ${cls}" id="disp-hp">${c.hp} / ${c.maxHp}</div>
+        </div>
+        <div class="hp-stat">
+          <div class="hp-stat-label">Temp HP</div>
+          <div class="hp-stat-value time" id="disp-time">${c.timeHp}</div>
+        </div>
+        <div class="hp-stat">
+          <div class="hp-stat-label">Total HP</div>
+          <div class="hp-stat-value ${cls}" id="disp-eff">${effectiveHp(c)}</div>
+        </div>
+      </div>
+
+      <div class="hp-bar-full" id="hp-bar-wrap" style="position:relative;">
+        <div class="hp-bar-full-fill" id="hp-bar-fill"
+          style="width:${Math.max(0, pct)}%;background:${col};">
+        </div>
+        <div class="hp-time-fill" id="hp-time-bar"
+          style="left:${Math.max(0, pct)}%;width:${timePct}%;">
+        </div>
+      </div>
+
+      <div class="calc-input-row">
+        <label>AMOUNT</label>
+        <input type="number" id="calc-amount" value="0" min="0" placeholder="0" oninput="clampAmount()">
+      </div>
+
+      <div class="calc-actions">
+        <button class="calc-action-btn btn-damage" onclick="applyDamage()">
+          <span class="btn-icon">💀</span>Damage
+        </button>
+        <button class="calc-action-btn btn-heal" onclick="applyHeal()">
+          <span class="btn-icon">💚</span>Heal
+        </button>
+        <button class="calc-action-btn btn-timehp" onclick="applyTimeHp()">
+          <span class="btn-icon">🔵</span>Temp HP
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderAttackPanel() {
+  const section = document.getElementById('attack-panel-section');
+  const c = characters[selectedIdx];
+  if (!c || !c.attacks || c.attacks.length === 0) { section.innerHTML = ''; return; }
+
+  const btns = c.attacks.map((atk, i) => {
+    const label = `${atk.numDice}d${atk.diceType}${atk.bonus >= 0 ? '+' : ''}${atk.bonus}`;
+    return `<button class="attack-use-btn" onclick="rollAttack(${i})">
+      <span class="attack-dice-label">🎲 ${label}</span>
+      <span style="font-size:10px; color:var(--text-dim); letter-spacing:0.06em;">ROLL</span>
+    </button>`;
+  }).join('');
+
+  section.innerHTML = `
+    <div class="attack-panel">
+      <div class="attack-panel-title">⚔ Attacks — <span style="color:var(--gold2);font-style:italic;">${escHtml(c.name)}</span></div>
+      <div class="attack-btn-list">${btns}</div>
+      <div id="roll-result-display"></div>
+    </div>
+  `;
+}
+
+function rollAttack(atkIdx) {
+  const c = characters[selectedIdx];
+  if (!c) return;
+  const atk = c.attacks[atkIdx];
+  if (!atk) return;
+
+  const rolls = [];
+  for (let i = 0; i < atk.numDice; i++) {
+    rolls.push(Math.floor(Math.random() * atk.diceType) + 1);
+  }
+  const sum = rolls.reduce((a, b) => a + b, 0);
+  const total = sum + atk.bonus;
+  const bonusStr = atk.bonus >= 0 ? `+${atk.bonus}` : `${atk.bonus}`;
+  const diceLabel = `${atk.numDice}d${atk.diceType}${bonusStr}`;
+  const rollsStr = rolls.join(', ');
+
+  const display = document.getElementById('roll-result-display');
+  if (display) {
+    display.innerHTML = `
+      <div class="roll-result">
+        <div class="roll-total">${total}</div>
+        <div class="roll-breakdown">
+          <strong>${diceLabel}</strong><br>
+          Dice: [${rollsStr}] = ${sum}${atk.bonus !== 0 ? ` ${atk.bonus >= 0 ? '+' : ''}${atk.bonus} bonus` : ''}<br>
+          Total: <strong style="color:var(--gold2);">${total}</strong>
+        </div>
+      </div>
+    `;
+  }
+
+  addLog(`🎲 <span class="log-name">${escHtml(c.name)}</span> rolls <span style="color:var(--gold);">${diceLabel}</span> → [${rollsStr}]${atk.bonus !== 0 ? ` ${bonusStr}` : ''} = <strong style="color:var(--gold2);">${total}</strong>`);
+}
+
+function clampAmount() {
+  const inp = document.getElementById('calc-amount');
+  if (!inp) return;
+  const v = parseInt(inp.value);
+  if (isNaN(v) || v < 0) inp.value = 0;
+}
+
+function getAmount() {
+  const inp = document.getElementById('calc-amount');
+  if (!inp) return 0;
+  const v = parseInt(inp.value);
+  if (isNaN(v) || v < 0) { showToast('Enter a valid amount!', 'error'); return null; }
+  return v;
+}
+
+function selectChar(i) {
+  selectedIdx = i;
+  renderInitiativeTrack();
+  renderHpCalc();
+  renderAttackPanel();
+}
+
+function applyDamage() {
+  const amount = getAmount();
+  if (amount === null || amount === 0) return;
+  const c = characters[selectedIdx];
+
+  const useTime = Math.min(c.timeHp, amount);
+  c.timeHp -= useTime;
+  const remaining = amount - useTime;
+  c.hp = Math.max(0, c.hp - remaining);
+  c.alive = c.hp > 0;
+
+  const panel = document.getElementById('hp-calc-section');
+  if (panel) {
+    panel.classList.remove('flash-damage', 'flash-heal');
+    void panel.offsetWidth;
+    panel.classList.add('flash-damage');
+  }
+
+  spawnFloat(`-${amount}`, '#e74c3c');
+
+  addLog(`⚔ <span class="log-name">${escHtml(c.name)}</span> takes <span class="log-dmg">${amount} damage</span>${useTime > 0 ? ` (${useTime} to Temp HP)` : ''} → ${effectiveHp(c)} HP`);
+
+  if (!c.alive) {
+    addLog(`💀 <span class="log-name">${escHtml(c.name)}</span> has fallen!`);
+    showToast(`${c.name} has fallen! ☠`, 'error');
+  }
+
+  renderFightView();
+}
+
+function applyHeal() {
+  const amount = getAmount();
+  if (amount === null || amount === 0) return;
+  const c = characters[selectedIdx];
+
+  c.hp = Math.min(c.maxHp, c.hp + amount);
+  c.alive = c.hp > 0;
+
+  const panel = document.getElementById('hp-calc-section');
+  if (panel) {
+    panel.classList.remove('flash-damage', 'flash-heal');
+    void panel.offsetWidth;
+    panel.classList.add('flash-heal');
+  }
+
+  spawnFloat(`+${amount}`, '#27ae60');
+  addLog(`💚 <span class="log-name">${escHtml(c.name)}</span> heals <span class="log-heal">${amount} HP</span> → ${c.hp}/${c.maxHp}`);
+
+  renderFightView();
+}
+
+function applyTimeHp() {
+  const amount = getAmount();
+  if (amount === null || amount === 0) return;
+  const c = characters[selectedIdx];
+
+  c.timeHp += amount;
+  spawnFloat(`+${amount} TEMP`, '#7ec8e3');
+  addLog(`🔵 <span class="log-name">${escHtml(c.name)}</span> gains <span class="log-timehp">${amount} Temp HP</span> → Total: ${effectiveHp(c)}`);
+
+  renderFightView();
+}
+
+function spawnFloat(text, color) {
+  const section = document.getElementById('hp-calc-section');
+  if (!section) return;
+  const span = document.createElement('div');
+  span.className = 'float-number';
+  span.textContent = text;
+  span.style.color = color;
+  span.style.left = `50%`;
+  span.style.top = `30px`;
+  span.style.transform = 'translateX(-50%)';
+  section.style.position = 'relative';
+  section.appendChild(span);
+  setTimeout(() => span.remove(), 1200);
+}
+
+function nextTurn() {
+  const aliveIndices = characters.map((c, i) => ({ c, i })).filter(x => x.c.hp > 0);
+  if (aliveIndices.length === 0) { showToast('All combatants have fallen!', 'error'); return; }
+
+  // Find next alive character after currentTurnIdx
+  let next = (currentTurnIdx + 1) % characters.length;
+  let loops = 0;
+  while (characters[next].hp <= 0 && loops < characters.length) {
+    next = (next + 1) % characters.length;
+    loops++;
+  }
+
+  if (next <= currentTurnIdx && aliveIndices.length > 0) {
+    round++;
+    addLog(`<br>🔔 <span class="log-round">Round ${round} begins!</span>`);
+  }
+
+  currentTurnIdx = next;
+  selectedIdx = next;
+
+  renderFightView();
+  addLog(`🎲 <span class="log-name">${characters[currentTurnIdx].name}</span>'s turn`);
+}
+
+function endFight() {
+  characters = [];
+  selectedIdx = 0;
+  currentTurnIdx = 0;
+  round = 1;
+  document.getElementById('attack-panel-section').innerHTML = '';
+  switchView('view-setup');
+  showToast('Battle ended. Rest well, adventurer.', 'success');
+}
+
+// ─── COMBAT LOG ──────────────────────────────────────────
+function addLog(html) {
+  const container = document.getElementById('combat-log-entries');
+  if (!container) return;
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = html;
+  container.appendChild(entry);
+  container.scrollTop = container.scrollHeight;
+}
+
+// ─── TOAST ───────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ` ${type}` : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.classList.remove('show'); }, 2800);
+}
+
+// ─── UTILITIES ───────────────────────────────────────────
+function escHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+// Pre-populate with some example characters for flavour
+window.addEventListener('DOMContentLoaded', () => {
+  addCharRow('Lyra Dawnweaver', '85', '20', '16');
+  addCharRow('Thordak Ironveil', '120', '14', '18');
+  addCharRow('Goblin Scout', '22', '17', '13');
+
+  // Example attacks for the pre-filled characters
+  const ids = Object.keys(charAttacks).map(Number);
+  if (ids[0]) charAttacks[ids[0]] = [{ numDice: 2, diceType: 6, bonus: 3 }, { numDice: 1, diceType: 8, bonus: 5 }];
+  if (ids[1]) charAttacks[ids[1]] = [{ numDice: 1, diceType: 12, bonus: 4 }];
+  if (ids[2]) charAttacks[ids[2]] = [{ numDice: 1, diceType: 6, bonus: 1 }];
+
+  // Update dots buttons to show they have attacks
+  ids.forEach(id => {
+    const atks = charAttacks[id] || [];
+    const btn = document.getElementById(`dots-btn-${id}`);
+    if (btn && atks.length > 0) btn.classList.add('has-attacks');
+  });
+
+  updateCharCount();
+});
+</script>
+</body>
+</html>
