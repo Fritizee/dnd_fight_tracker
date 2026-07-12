@@ -1,0 +1,155 @@
+/* ─── VIEWS (setup page only) ─── */
+.view { display: none; animation: viewIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.view.active { display: block; }
+
+/* ─── CHARACTER INPUT TABLE ─── */
+.char-table-head {
+  display: grid;
+  grid-template-columns: 1fr 90px 100px 70px 44px 70px;
+  gap: 10px;
+  padding: 0 10px 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.char-table-head span {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gold-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.char-rows { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 20px; }
+
+.char-row {
+  display: grid;
+  grid-template-columns: 1fr 90px 100px 70px 44px 70px;
+  gap: 10px;
+  align-items: center;
+  animation: rowSlideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.char-row:hover { border-color: var(--border2); }
+
+@keyframes rowSlideIn {
+  from { opacity: 0; transform: translateX(-14px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes rowSlideOut {
+  from { opacity: 1; transform: translateX(0) scaleY(1); max-height: 60px; margin-bottom: 6px; }
+  to { opacity: 0; transform: translateX(14px) scaleY(0); max-height: 0; margin-bottom: 0; padding: 0; }
+}
+
+.char-row.removing {
+  animation: rowSlideOut 0.3s ease forwards;
+  overflow: hidden;
+}
+
+.btn-dots {
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--gold-dim);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  letter-spacing: -1px;
+}
+
+.btn-dots:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+  background: rgba(201,168,76,0.08);
+  box-shadow: 0 0 10px rgba(201,168,76,0.15);
+}
+
+.btn-dots.has-attacks {
+  border-color: rgba(201,168,76,0.5);
+  color: var(--gold);
+  background: rgba(201,168,76,0.08);
+}
+
+/* ─── ATTACKS VIEW ─── */
+.attacks-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  padding: 4px 0 16px;
+  transition: color 0.2s;
+}
+
+.attacks-back-btn:hover { color: var(--gold); }
+
+.attack-list { display: flex; flex-direction: column; gap: 10px; margin: 20px 0; }
+
+.attack-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 80px 80px 44px;
+  gap: 10px;
+  align-items: center;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  animation: rowSlideIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.attack-row-label {
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+
+select {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: 'Crimson Pro', serif;
+  font-size: 16px;
+  padding: 7px 10px;
+  width: 100%;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8a9a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+
+select:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 2px rgba(201,168,76,0.15); }
+select option { background: #1a1628; }
+
+@media (max-width: 600px) {
+  .char-table-head { grid-template-columns: 1fr 70px 80px 56px 36px 60px; }
+  .char-row { grid-template-columns: 1fr 70px 80px 56px 36px 60px; }
+  .attack-row { grid-template-columns: 60px 1fr 70px 70px 36px; }
+}

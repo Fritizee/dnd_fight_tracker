@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>D&D Fight Tracker — Setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/setup.css">
+</head>
+<body>
+
+<div class="rune-bg">
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="100" cy="100" r="80" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+    <polygon points="100,20 180,160 20,160" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+    <circle cx="100" cy="100" r="10" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+    <line x1="100" y1="20" x2="100" y2="180" stroke="#c9a84c" stroke-width="0.8"/>
+    <line x1="20" y1="100" x2="180" y2="100" stroke="#c9a84c" stroke-width="0.8"/>
+  </svg>
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="100,10 190,70 190,130 100,190 10,130 10,70" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+    <polygon points="100,40 160,78 160,122 100,160 40,122 40,78" fill="none" stroke="#c9a84c" stroke-width="1"/>
+    <circle cx="100" cy="100" r="15" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+  </svg>
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="100" cy="100" r="90" fill="none" stroke="#c9a84c" stroke-width="1"/>
+    <line x1="10" y1="100" x2="190" y2="100" stroke="#c9a84c" stroke-width="1"/>
+    <line x1="100" y1="10" x2="100" y2="190" stroke="#c9a84c" stroke-width="1"/>
+    <line x1="37" y1="37" x2="163" y2="163" stroke="#c9a84c" stroke-width="1"/>
+    <line x1="163" y1="37" x2="37" y2="163" stroke="#c9a84c" stroke-width="1"/>
+    <circle cx="100" cy="100" r="30" fill="none" stroke="#c9a84c" stroke-width="1"/>
+  </svg>
+  <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="100,10 190,190 10,190" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+    <polygon points="100,190 10,10 190,10" fill="none" stroke="#c9a84c" stroke-width="1.5"/>
+    <circle cx="100" cy="100" r="50" fill="none" stroke="#c9a84c" stroke-width="1"/>
+  </svg>
+</div>
+
+<div id="app">
+  <header class="app-header">
+    <span class="sigil">⚔️</span>
+    <h1>D&D Fight Tracker</h1>
+    <p>Track initiative, HP, and the chaos of battle</p>
+    <div class="divider"></div>
+  </header>
+
+  <div id="view-setup" class="view active">
+    <div class="panel">
+      <div class="panel-title">
+        <span>🧙</span> Assemble Your Party
+        <span id="char-count-badge" class="char-count-badge">0 combatants</span>
+      </div>
+      <div class="panel-sub">Enter each combatant's name, HP, AC, and initiative. Then charge into battle.</div>
+
+      <div class="char-table-head">
+        <span>Name</span>
+        <span>Max HP</span>
+        <span>Initiative</span>
+        <span>AC</span>
+        <span style="text-align:center;">Atk</span>
+        <span></span>
+      </div>
+
+      <div id="char-rows" class="char-rows"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="addCharRow()">＋ Add Combatant</button>
+        <button class="btn btn-gold btn-wide" onclick="startFight()" style="flex:1;">
+          ⚔ Begin Battle
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-attacks" class="view">
+    <div class="panel">
+      <button class="attacks-back-btn" onclick="closeAttacksView()">← Back to Party</button>
+      <div class="panel-title"><span>🗡</span> Attacks for <span id="attacks-char-name" style="color:var(--gold2); font-style:italic;"></span></div>
+      <div class="panel-sub">Define attacks with dice rolls. Each attack rolls its dice and adds the bonus.</div>
+
+      <div id="attack-list" class="attack-list"></div>
+
+      <button class="btn btn-ghost" onclick="addAttackRow()">＋ Add Attack</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/common.js"></script>
+<script src="js/setup.js"></script>
+</body>
+</html>
