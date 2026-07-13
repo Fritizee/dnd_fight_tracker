@@ -105,9 +105,46 @@
 }
 
 .swarm-check input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--gold);
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.swarm-check span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.swarm-check span::before {
+  content: '';
+  width: 13px;
+  height: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--gold-dim);
+  border-radius: 3px;
+  background: var(--bg2);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: 900;
+  transition: all 0.18s ease;
+}
+
+.swarm-check input[type="checkbox"]:checked + span::before {
+  content: '✓';
+  background: var(--gold);
+  border-color: var(--gold2);
+}
+
+.swarm-check:focus-within span::before {
+  outline: 2px solid rgba(232,200,112,0.4);
+  outline-offset: 2px;
+}
+
+.swarm-check:hover span::before {
+  border-color: var(--gold);
   cursor: pointer;
 }
 

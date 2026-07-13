@@ -46,7 +46,21 @@ function renderTurnBar() {
 function renderInitiativeTrack() {
   const track = document.getElementById('initiative-track');
   track.innerHTML = '';
+  const renderedSwarms = new Set();
+
   characters.forEach((c, i) => {
+    if (c.swarmId) {
+      if (renderedSwarms.has(c.swarmId)) return;
+      renderedSwarms.add(c.swarmId);
+      renderSwarmInitiativeCard(track, c);
+      return;
+    }
+
+    track.appendChild(createInitiativeCard(c, i));
+  });
+}
+
+function createInitiativeCard(c, i) {
     const card = document.createElement('div');
     card.className = 'init-card';
     if (i === selectedIdx) card.classList.add('selected');
@@ -78,8 +92,41 @@ function renderInitiativeTrack() {
       <div class="hp-mini-ac">AC ${c.ac}</div>
     `;
     card.onclick = () => selectChar(i);
-    track.appendChild(card);
-  });
+    return card;
+}
+
+function renderSwarmInitiativeCard(track, c) {
+  const members = getSwarmMembers(c.swarmId);
+  const selectedMember = members.find(({ i }) => i === selectedIdx);
+  const currentMember = members.find(({ i }) => i === currentTurnIdx);
+  const displayMember = selectedMember || currentMember || members[0];
+  const aliveCount = members.filter(({ ch }) => ch.alive && ch.hp > 0).length;
+  const card = document.createElement('div');
+
+  card.className = 'init-card swarm-init-card';
+  if (selectedMember) card.classList.add('selected');
+  if (currentMember) card.classList.add('first-init');
+  if (aliveCount === 0) card.classList.add('dead');
+
+  card.innerHTML = `
+    <button class="init-card-main" type="button">
+      <div class="init-badge">INIT ${c.initiative}</div>
+      <div class="card-name">${escHtml(c.baseName || c.name)}</div>
+      <div class="swarm-card-summary">${aliveCount}/${members.length} active</div>
+      <div class="hp-mini-text"><b>${effectiveHp(displayMember.ch)}</b>/${displayMember.ch.maxHp}</div>
+      <div class="hp-mini-ac">AC ${displayMember.ch.ac}</div>
+    </button>
+  `;
+  card.querySelector('.init-card-main').onclick = () => selectFirstAliveSwarmMember(c.swarmId);
+
+  track.appendChild(card);
+}
+
+function selectFirstAliveSwarmMember(swarmId) {
+  const members = getSwarmMembers(swarmId);
+  const firstAlive = members.find(({ ch }) => ch.alive && ch.hp > 0);
+  const memberToSelect = firstAlive || members[0];
+  if (memberToSelect) selectChar(memberToSelect.i);
 }
 
 function getSwarmMembers(swarmId) {
@@ -93,13 +140,19 @@ function renderSwarmPicker(c) {
   const members = getSwarmMembers(c.swarmId);
   const options = members.map(({ ch, i }) => {
     const dead = !ch.alive || ch.hp <= 0;
-    return `<option value="${i}" ${i === selectedIdx ? 'selected' : ''}>${escHtml(ch.name)}${dead ? ' ☠' : ''}</option>`;
+    return `<button type="button" class="swarm-member-option ${i === selectedIdx ? 'selected' : ''} ${dead ? 'dead' : ''}" onclick="selectSwarmMember(${i})">
+      <span class="swarm-member-check" aria-hidden="true">${i === selectedIdx ? '✓' : ''}</span>
+      <span>${escHtml(ch.name)}</span>
+      <span class="swarm-member-hp">${effectiveHp(ch)}/${ch.maxHp}${dead ? ' ☠' : ''}</span>
+    </button>`;
   }).join('');
 
   return `
-    <div class="swarm-picker-row">
-      <label for="swarm-member-select">Swarm Member</label>
-      <select id="swarm-member-select" onchange="selectSwarmMember(parseInt(this.value, 10))">${options}</select>
+    <div class="swarm-picker-row" role="group" aria-label="Choose swarm member">
+      <div class="swarm-picker-label">Choose ${escHtml(c.baseName || 'swarm member')}</div>
+      <div class="swarm-picker-options">
+        ${options}
+      </div>
     </div>
   `;
 }
