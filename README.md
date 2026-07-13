@@ -22,6 +22,8 @@ Track initiative order, HP, AC, and status effects for all combatants — no ins
 
 The two pages share battle state via `sessionStorage`, so refreshing the battle page keeps your progress.
 
+Check out our [Project Roadmap](ROADMAP.md) to see planned features and upcoming milestones.
+
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/) — Fritizee
