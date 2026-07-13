@@ -259,6 +259,32 @@
   font-style: italic;
 }
 
+.swarm-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  background: rgba(201,168,76,0.06);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 8px;
+}
+
+.swarm-picker-row label {
+  font-family: 'Cinzel', serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gold-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.swarm-picker-row select {
+  flex: 1;
+  min-width: 0;
+}
+
 .hp-display-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;

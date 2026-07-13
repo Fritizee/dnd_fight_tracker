@@ -82,6 +82,32 @@ function renderInitiativeTrack() {
   });
 }
 
+function getSwarmMembers(swarmId) {
+  return characters
+    .map((ch, i) => ({ ch, i }))
+    .filter(x => x.ch.swarmId === swarmId);
+}
+
+function renderSwarmPicker(c) {
+  if (!c.swarmId) return '';
+  const members = getSwarmMembers(c.swarmId);
+  const options = members.map(({ ch, i }) => {
+    const dead = !ch.alive || ch.hp <= 0;
+    return `<option value="${i}" ${i === selectedIdx ? 'selected' : ''}>${escHtml(ch.name)}${dead ? ' ☠' : ''}</option>`;
+  }).join('');
+
+  return `
+    <div class="swarm-picker-row">
+      <label for="swarm-member-select">Swarm Member</label>
+      <select id="swarm-member-select" onchange="selectSwarmMember(parseInt(this.value, 10))">${options}</select>
+    </div>
+  `;
+}
+
+function selectSwarmMember(idx) {
+  if (idx >= 0 && idx < characters.length) selectChar(idx);
+}
+
 function renderHpCalc() {
   const section = document.getElementById('hp-calc-section');
   const c = characters[selectedIdx];
@@ -98,6 +124,8 @@ function renderHpCalc() {
         🗡 HP Calculator —
         <span class="selected-char-name">${escHtml(c.name)}</span>
       </div>
+
+      ${renderSwarmPicker(c)}
 
       <div class="hp-display-row">
         <div class="hp-stat">

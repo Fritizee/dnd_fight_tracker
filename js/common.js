@@ -2,8 +2,19 @@
 
 const STORAGE_KEY = 'dnd_fight_tracker_battle';
 
-function makeChar(name, maxHp, initiative, ac, attacks) {
-  return { name, maxHp, initiative, ac, hp: maxHp, timeHp: 0, alive: true, attacks: attacks || [] };
+function makeChar(name, maxHp, initiative, ac, attacks, swarmMeta) {
+  const char = { name, maxHp, initiative, ac, hp: maxHp, timeHp: 0, alive: true, attacks: attacks || [] };
+  if (swarmMeta) {
+    char.swarmId = swarmMeta.swarmId;
+    char.baseName = swarmMeta.baseName;
+    char.copyIndex = swarmMeta.copyIndex;
+    char.swarmCount = swarmMeta.swarmCount;
+  }
+  return char;
+}
+
+function cloneAttacks(attacks) {
+  return (attacks || []).map(a => ({ numDice: a.numDice, diceType: a.diceType, bonus: a.bonus }));
 }
 
 function effectiveHp(c) {

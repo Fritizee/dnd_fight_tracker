@@ -14,7 +14,7 @@ function switchView(id) {
   requestAnimationFrame(() => { el.classList.add('active'); });
 }
 
-function addCharRow(defaultName = '', defaultHp = '', defaultInit = '', defaultAc = '') {
+function addCharRow(defaultName = '', defaultHp = '', defaultInit = '', defaultAc = '', swarm = false, swarmCount = 3) {
   rowId++;
   const id = rowId;
   charAttacks[id] = [];
@@ -23,15 +23,33 @@ function addCharRow(defaultName = '', defaultHp = '', defaultInit = '', defaultA
   row.className = 'char-row';
   row.dataset.rowId = id;
   row.innerHTML = `
-    <input type="text" placeholder="e.g. Aragorn" value="${defaultName}" data-field="name" onchange="updateCharCount()">
+    <input type="text" placeholder="e.g. Aragorn" value="${defaultName}" data-field="name" onchange="updateCharCount()" oninput="updateCharCount()">
     <input type="number" placeholder="100" value="${defaultHp}" data-field="hp" min="1">
     <input type="number" placeholder="15" value="${defaultInit}" data-field="init" min="1" max="20">
     <input type="number" placeholder="16" value="${defaultAc}" data-field="ac" min="1">
+    <div class="swarm-cell">
+      <label class="swarm-check" title="Create multiple copies of this combatant">
+        <input type="checkbox" data-field="swarm" ${swarm ? 'checked' : ''} onchange="toggleSwarmFields(${id})">
+        <span>Swarm</span>
+      </label>
+      <input type="number" class="swarm-count" data-field="swarm-count" value="${swarmCount}" min="2" max="50"
+        placeholder="#" title="How many copies to create" oninput="updateCharCount()" ${swarm ? '' : 'hidden'}>
+    </div>
     <button class="btn-dots" id="dots-btn-${id}" onclick="openAttacksView(${id})" title="Edit attacks">···</button>
     <button class="btn btn-crimson btn-sm" onclick="removeRow(${id})">✕</button>
   `;
   container.appendChild(row);
   if (!defaultName) row.querySelector('[data-field="name"]').focus();
+  updateCharCount();
+}
+
+function toggleSwarmFields(id) {
+  const row = document.querySelector(`.char-row[data-row-id="${id}"]`);
+  if (!row) return;
+  const swarm = row.querySelector('[data-field="swarm"]').checked;
+  const countInput = row.querySelector('[data-field="swarm-count"]');
+  countInput.hidden = !swarm;
+  if (swarm && !countInput.value) countInput.value = 3;
   updateCharCount();
 }
 
@@ -44,10 +62,29 @@ function removeRow(id) {
   setTimeout(() => { row.remove(); delete charAttacks[id]; updateCharCount(); }, 300);
 }
 
+function getProjectedCombatantCount() {
+  let count = 0;
+  for (const row of document.querySelectorAll('.char-row')) {
+    const name = row.querySelector('[data-field="name"]').value.trim();
+    if (!name) continue;
+    const swarm = row.querySelector('[data-field="swarm"]')?.checked;
+    const swarmCount = swarm
+      ? Math.max(2, parseInt(row.querySelector('[data-field="swarm-count"]').value) || 2)
+      : 1;
+    count += swarmCount;
+  }
+  return count;
+}
+
 function updateCharCount() {
-  const count = document.querySelectorAll('.char-row').length;
-  document.getElementById('char-count-badge').textContent =
-    count === 1 ? '1 combatant' : `${count} combatants`;
+  const count = getProjectedCombatantCount();
+  const rows = document.querySelectorAll('.char-row').length;
+  const badge = document.getElementById('char-count-badge');
+  if (count === 0) {
+    badge.textContent = rows === 1 ? '1 row' : `${rows} rows`;
+    return;
+  }
+  badge.textContent = count === 1 ? '1 combatant' : `${count} combatants`;
 }
 
 function getRowsData() {
@@ -64,11 +101,10 @@ function getRowsData() {
 
     if (!name) continue;
 
-    if (namesSet.has(name.toLowerCase())) {
-      showToast(`Duplicate name: "${name}"`, 'error');
-      return null;
-    }
-    namesSet.add(name.toLowerCase());
+    const swarm = row.querySelector('[data-field="swarm"]')?.checked;
+    const swarmCount = swarm
+      ? Math.max(2, parseInt(row.querySelector('[data-field="swarm-count"]').value) || 2)
+      : 1;
 
     const hp = parseInt(hpRaw);
     const init = parseInt(initRaw);
@@ -77,7 +113,30 @@ function getRowsData() {
     if (isNaN(init)) { showToast(`"${name}" needs a valid Initiative`, 'error'); return null; }
     if (isNaN(ac) || ac <= 0) { showToast(`"${name}" needs a valid AC (> 0)`, 'error'); return null; }
 
-    results.push({ name, hp, init, ac, attacks: charAttacks[rid] || [] });
+    const attacks = charAttacks[rid] || [];
+    const swarmId = swarm ? `swarm-${rid}` : null;
+    const copies = swarm ? swarmCount : 1;
+
+    for (let i = 1; i <= copies; i++) {
+      const fighterName = swarm ? `${name} ${i}` : name;
+      if (namesSet.has(fighterName.toLowerCase())) {
+        showToast(`Duplicate name: "${fighterName}"`, 'error');
+        return null;
+      }
+      namesSet.add(fighterName.toLowerCase());
+
+      results.push({
+        name: fighterName,
+        hp,
+        init,
+        ac,
+        attacks: cloneAttacks(attacks),
+        swarmId,
+        baseName: swarm ? name : null,
+        copyIndex: swarm ? i : null,
+        swarmCount: swarm ? swarmCount : null
+      });
+    }
   }
   return results;
 }
@@ -90,7 +149,19 @@ function startFight() {
   }
 
   const characters = sortByInitiative(
-    data.map(d => makeChar(d.name, d.hp, d.init, d.ac, d.attacks))
+    data.map(d => makeChar(
+      d.name,
+      d.hp,
+      d.init,
+      d.ac,
+      d.attacks,
+      d.swarmId ? {
+        swarmId: d.swarmId,
+        baseName: d.baseName,
+        copyIndex: d.copyIndex,
+        swarmCount: d.swarmCount
+      } : null
+    ))
   );
 
   FightState.startBattle(characters);
@@ -183,7 +254,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   addCharRow('Lyra Dawnweaver', '85', '20', '16');
   addCharRow('Thordak Ironveil', '120', '14', '18');
-  addCharRow('Goblin Scout', '22', '17', '13');
+  addCharRow('Goblin Scout', '22', '17', '13', true, 3);
 
   const ids = Object.keys(charAttacks).map(Number);
   if (ids[0]) charAttacks[ids[0]] = [{ numDice: 2, diceType: 6, bonus: 3 }, { numDice: 1, diceType: 8, bonus: 5 }];
