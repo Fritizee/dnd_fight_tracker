@@ -232,6 +232,7 @@ function renderAttackPanel() {
   const btns = c.attacks.map((atk, i) => {
     const label = `${atk.numDice}d${atk.diceType}${atk.bonus >= 0 ? '+' : ''}${atk.bonus}`;
     return `<button class="attack-use-btn" onclick="rollAttack(${i})">
+      ${atk.name ? `<span class="attack-name">${escHtml(atk.name)}</span>` : ''}
       <span class="attack-dice-label">🎲 ${label}</span>
       <span style="font-size:10px; color:var(--text-dim); letter-spacing:0.06em;">ROLL</span>
     </button>`;
@@ -276,7 +277,8 @@ function rollAttack(atkIdx) {
     `;
   }
 
-  addLog(`🎲 <span class="log-name">${escHtml(c.name)}</span> rolls <span style="color:var(--gold);">${diceLabel}</span> → [${rollsStr}]${atk.bonus !== 0 ? ` ${bonusStr}` : ''} = <strong style="color:var(--gold2);">${total}</strong>`);
+  const actionName = atk.name ? ` ${escHtml(atk.name)}` : '';
+  addLog(`🎲 <span class="log-name">${escHtml(c.name)}</span>${actionName} <span style="color:var(--gold);">${diceLabel}</span> → [${rollsStr}]${atk.bonus !== 0 ? ` ${bonusStr}` : ''} = <strong style="color:var(--gold2);">${total}</strong>`);
 }
 
 function clampAmount() {

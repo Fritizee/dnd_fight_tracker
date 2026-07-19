@@ -628,6 +628,14 @@
   color: var(--gold2);
 }
 
+.attack-use-btn .attack-name {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
 .roll-result {
   display: flex;
   align-items: center;
